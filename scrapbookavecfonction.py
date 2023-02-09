@@ -1,5 +1,7 @@
 import csv
 import os
+from pathlib import Path
+from typing import List,Tuple,Dict
 from requests_html import HTMLSession
 
 
@@ -15,7 +17,7 @@ def next_page_url(page):
 
 
 # find all the category links in the first page except category:"book"
-def get_links_of_category_in_first_page(first_page_url):
+def get_links_of_category_in_first_page(first_page_url:str) -> list[str] :
     page = session.get(first_page_url)
     category_links = []
     all_category_content = page.html.find('ul.nav-list a')
@@ -26,7 +28,7 @@ def get_links_of_category_in_first_page(first_page_url):
 
 
 # get all the links in a single detail page of category
-def get_links_of_books_in_page(page):
+def get_links_of_books_in_page(page) -> list[str] :
     # For Tuple, List, Optional objects, look at the module 'typings' in the standard library
 
     # Find book links in the page
@@ -40,7 +42,7 @@ def get_links_of_books_in_page(page):
 
 
 # get all the book's links of the site
-def get_all_books_links_of_one_category(category_link):
+def get_all_books_links_of_one_category(category_link:list[str]) -> list[str] :
     all_books_links = []
     book_links = []
     next_page_link = category_link
@@ -54,7 +56,7 @@ def get_all_books_links_of_one_category(category_link):
 
 
 # get diver information from a single book in detail page
-def get_data_in_book_page(url):
+def get_data_in_book_page(url:str) -> dict[str] :
     page = session.get(url)
     download_links_of_images = []
     title = page.html.find('div.product_main h1', first='true').text
@@ -83,7 +85,7 @@ def get_data_in_book_page(url):
     return (data,image_absolute_link)
 
 
-url = 'http://books.toscrape.com/catalogue/category/books/mystery_3/index.html'
+url = 'http://books.toscrape.com/'
 session = HTMLSession()
 all_books_url = []
 data_all_books = {}
@@ -98,7 +100,7 @@ for single_url_of_category in url :
     all_books_url = all_books_url + get_all_books_links_of_one_category(single_url_of_category)
 
 # write all the informations asked
-with open('scape.csv','w',encoding='utf-8_sig',newline='') as file :
+with open('zhao_yuhao_1_donneescrape_13012023.csv','w',encoding='utf-8_sig',newline='') as file :
     header = ['Titre :','Catégorie:','Descripton :','UPC Code :','Etoile :', 'Prix hors taxe :','Prix taxe compris :','Stock :']
     writer =  csv.DictWriter(file,fieldnames=header)
     writer.writeheader()
@@ -106,12 +108,12 @@ with open('scape.csv','w',encoding='utf-8_sig',newline='') as file :
         data,links_image = get_data_in_book_page(single_url)
         code_upc = data['UPC Code :']
         writer.writerow(data)
-        print(links_image)
-        print(code_upc)
         image = session.get(links_image)
         #make a image fold if there is not
         if not os.path.exists('image') :
             os.mkdir('image')
         # name the images by using their upc code
-        with open('image\\'+ code_upc +'.jpg','wb') as file :
+        # use pathlib to solve the problem of /
+        image_to_write = Path('image/' + code_upc + '.jpg')
+        with open(image_to_write,'wb') as file :
             file.write(image.content)
