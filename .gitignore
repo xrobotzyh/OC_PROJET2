@@ -2,4 +2,4 @@
 /image/
 *.csv
 .idea/
-venv
+env

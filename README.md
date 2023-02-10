@@ -8,10 +8,7 @@ This is a openclassrooms projects which is for study purpose. The projet is abou
 
 ## Quick start
 
-Create a new virtual environment
-```bash
-python -m venv env
-```
+
 Clone scripts from the repository
 
 ```bash
@@ -22,10 +19,18 @@ Change to the folder
 ```bash
 cd openclassroomprojet
 ```
+
+Create and activate a new virtual environment
+```bash
+python -m venv env
+source ./env/bin/activate
+```
+
 Install the dependencies
 ```bash
 pip install -r requirements.txt
 ```
+
 Run the scripts
 ```bash
 python scrapbookavecfonction.py
