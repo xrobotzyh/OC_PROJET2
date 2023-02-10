@@ -1,3 +1,4 @@
 #dossier img et csv
 /image/
 *.csv
+.idea/
