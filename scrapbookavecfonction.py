@@ -1,12 +1,14 @@
 import csv
 import os
 from pathlib import Path
-from typing import List,Tuple,Dict
+from typing import List, Optional, Tuple, Dict
 from requests_html import HTMLSession
+import re
+import collections
 
 
 # find if there is a next button in the page
-def next_page_url(page):
+def next_page_url(page) -> Optional[str]:
     next_page_link_a_tag = page.html.find('li.next a', first='True')
     if next_page_link_a_tag is not None:
         next_page_link = list(next_page_link_a_tag.absolute_links)
@@ -16,19 +18,28 @@ def next_page_url(page):
         return nex_page_link
 
 
-# find all the category links in the first page except category:"book"
-def get_links_of_category_in_first_page(first_page_url:str) -> list[str] :
+def get_links_of_category_in_first_page(first_page_url: str) -> List[str]:
+    """
+    Find all the category links in the first page except category: "book"
+
+    :param first_page_url: le lien vers la page d'accueil du site
+    :return: Une liste d'urls vers les pages des categories
+    """
     page = session.get(first_page_url)
     category_links = []
     all_category_content = page.html.find('ul.nav-list a')
     for category_content in all_category_content:
-        category_links = category_links + list(category_content.absolute_links)
+        category_link = list(category_content.absolute_links)[0]
+        category_links.append(category_link)
+
+    # Sur le site, le premier lien renvoie en arrière donc on le supprime
     category_links.pop(0)
+
     return category_links
 
 
 # get all the links in a single detail page of category
-def get_links_of_books_in_page(page) -> list[str] :
+def get_links_of_books_in_page(page) -> list[str]:
     # For Tuple, List, Optional objects, look at the module 'typings' in the standard library
 
     # Find book links in the page
@@ -42,7 +53,8 @@ def get_links_of_books_in_page(page) -> list[str] :
 
 
 # get all the book's links of the site
-def get_all_books_links_of_one_category(category_link:list[str]) -> list[str] :
+def get_all_books_links_of_one_category(category_link: str) -> List[str]:
+    print(f'Récupération des livres de la catégorie {category_link}')
     all_books_links = []
     book_links = []
     next_page_link = category_link
@@ -56,7 +68,7 @@ def get_all_books_links_of_one_category(category_link:list[str]) -> list[str] :
 
 
 # get diver information from a single book in detail page
-def get_data_in_book_page(url:str) -> dict[str] :
+def get_data_in_book_page(url: str) -> Tuple[Dict[str, str], str]:
     page = session.get(url)
     download_links_of_images = []
     title = page.html.find('div.product_main h1', first='true').text
@@ -67,53 +79,97 @@ def get_data_in_book_page(url:str) -> dict[str] :
     star_rating_information = page.html.find('p.star-rating', first='true')
 
     # using the arguments attrs to get the star rating informations
-    star_rating = star_rating_information.attrs.get('class')[1]
+    star = {"One": 1, "Two": 2, "Three": 3, "Four": 4, "Five": 5}
+    # find the value by key
+    star_rating = star[star_rating_information.attrs.get('class')[1]]
 
-    price_without_tax = page.html.find('table.table-striped tr td')[2].text
-    price_with_tax = page.html.find('table.table tr td')[3].text
-    inventory = page.html.find('table.table tr td')[5].text
+    price_without_tax_word = page.html.find('table.table-striped tr td')[2].text
+    price_without_tax = re.findall(r"\d+\.?\d*", price_without_tax_word)
+    price_with_tax_word = page.html.find('table.table tr td')[3].text
+    price_with_tax = re.findall(r"\d+\.?\d*", price_with_tax_word)
+    inventory_word = page.html.find('table.table tr td')[5].text
+    inventory = re.findall(r"\d+", inventory_word)
 
     # image links to absolute links by re write the link
     image_link = str(page.html.find('div.active img')[0].attrs.get('src'))
     image_absolute_link = 'http://books.toscrape.com' + image_link.replace('../..', '')
 
     # Use dictionary to write to the csv
-    data = {'Titre :': title, 'Catégorie:': category, 'Descripton :': production_descripton, 'UPC Code :': code_upc,
-             'Etoile :':star_rating, 'Prix hors taxe :': price_without_tax, 'Prix taxe compris :': price_with_tax,
-             'Stock :': inventory}
+    data = collections.OrderedDict()
+    data = {
+        'product_page_url': url,
+        'UPC Code': code_upc,
+        'Titre': title,
+        'Prix taxe compris': price_with_tax[0],
+        'Prix hors taxe': price_without_tax[0],
+        'Stock': inventory[0],
+        'Descripton': production_descripton,
+        'Catégorie': category,
+        'Etoile': star_rating,
+        'image link': image_absolute_link
+    }
 
-    return (data,image_absolute_link)
+    return data, image_absolute_link
 
 
-url = 'http://books.toscrape.com/'
+URL = 'http://books.toscrape.com/'
 session = HTMLSession()
-all_books_url = []
+all_books_urls = []
 data_all_books = {}
 links_all_images = []
 all_code_upc = []
 
 # get all the category links in the first page
-url = get_links_of_category_in_first_page(url)
+print(f'Récupération des liens des catégories')
+category_urls = get_links_of_category_in_first_page(URL)
+print(f'{len(category_urls)} catégories trouvées')
 
 # get all the page links from each categories
-for single_url_of_category in url :
-    all_books_url = all_books_url + get_all_books_links_of_one_category(single_url_of_category)
+print(f'Récupération des liens de tous les livres par catégorie')
+for single_url_of_category in category_urls:
+    all_books_urls = all_books_urls + get_all_books_links_of_one_category(single_url_of_category)
+print(f'{len(all_books_urls)} livres trouvés')
 
 # write all the informations asked
-with open('zhao_yuhao_1_donneescrape_13012023.csv','w',encoding='utf-8_sig',newline='') as file :
-    header = ['Titre :','Catégorie:','Descripton :','UPC Code :','Etoile :', 'Prix hors taxe :','Prix taxe compris :','Stock :']
-    writer =  csv.DictWriter(file,fieldnames=header)
+#make a CSV folder if there is not have
+if not os.path.exists('Fichier CSV'):
+    os.mkdir('Fichier CSV')
+csv_path = Path('Fichier CSV/zhao_yuhao_1_donneescrape_13012023.csv')
+print(f'Génération du fichier csv au chemin {csv_path} et récupération des images')
+
+# make a image folder if there is not have
+if not os.path.exists('image'):
+    os.mkdir('image')
+
+with open(csv_path, 'w', encoding='utf-8_sig', newline='') as file:
+    header = ['product_page_url',
+              'UPC Code',
+              'Titre',
+              'Prix taxe compris',
+              'Prix hors taxe',
+              'Stock',
+              'Descripton',
+              'Catégorie',
+              'Etoile',
+              'image link']
+    writer = csv.DictWriter(file, fieldnames=header)
     writer.writeheader()
-    for single_url in all_books_url :
-        data,links_image = get_data_in_book_page(single_url)
-        code_upc = data['UPC Code :']
+
+    for single_url in all_books_urls:
+        data, links_image = get_data_in_book_page(single_url)
         writer.writerow(data)
         image = session.get(links_image)
-        #make a image fold if there is not
-        if not os.path.exists('image') :
-            os.mkdir('image')
         # name the images by using their upc code
         # use pathlib to solve the problem of /
-        image_to_write = Path('image/' + code_upc + '.jpg')
-        with open(image_to_write,'wb') as file :
+        image_to_write = Path('image/' + data['UPC Code'] + '.jpg')
+        with open(image_to_write, 'wb') as file:
             file.write(image.content)
+
+print(f'Fini!')
+
+import re
+print(re.findall(r"\d+\.?\d*",'£45.17'))
+print(re.findall(r"\d+","In stock (19 available)"))
+data = {'one':1,"two":2}
+t = data['one']
+print(type(t))
