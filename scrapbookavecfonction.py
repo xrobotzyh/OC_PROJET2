@@ -23,19 +23,23 @@ def get_links_of_category_in_first_page(first_page_url: str) -> List[str]:
     Find all the category links in the first page except category: "book"
 
     :param first_page_url: le lien vers la page d'accueil du site
-    :return: Une liste d'urls vers les pages des categories
+    :return: Une liste d'urls vers les pages des categories,une liste de nom des categories
     """
     page = session.get(first_page_url)
     category_links = []
+    category_names = []
     all_category_content = page.html.find('ul.nav-list a')
     for category_content in all_category_content:
         category_link = list(category_content.absolute_links)[0]
+        category_name = category_content.text
         category_links.append(category_link)
+        category_names.append(category_name)
 
     # Sur le site, le premier lien renvoie en arrière donc on le supprime
-    category_links.pop(0)
+    del category_links[0]
+    del category_names[0]
 
-    return category_links
+    return category_links,category_names
 
 
 # get all the links in a single detail page of category
@@ -121,55 +125,46 @@ all_code_upc = []
 
 # get all the category links in the first page
 print(f'Récupération des liens des catégories')
-category_urls = get_links_of_category_in_first_page(URL)
+category_urls,category_names = get_links_of_category_in_first_page(URL)
 print(f'{len(category_urls)} catégories trouvées')
-
-# get all the page links from each categories
-print(f'Récupération des liens de tous les livres par catégorie')
-for single_url_of_category in category_urls:
-    all_books_urls = all_books_urls + get_all_books_links_of_one_category(single_url_of_category)
-print(f'{len(all_books_urls)} livres trouvés')
-
-# write all the informations asked
 #make a CSV folder if there is not have
 if not os.path.exists('Fichier CSV'):
     os.mkdir('Fichier CSV')
-csv_path = Path('Fichier CSV/zhao_yuhao_1_donneescrape_13012023.csv')
-print(f'Génération du fichier csv au chemin {csv_path} et récupération des images')
 
 # make a image folder if there is not have
 if not os.path.exists('image'):
     os.mkdir('image')
-
-with open(csv_path, 'w', encoding='utf-8_sig', newline='') as file:
-    header = ['product_page_url',
-              'UPC Code',
-              'Titre',
-              'Prix taxe compris',
-              'Prix hors taxe',
-              'Stock',
-              'Descripton',
-              'Catégorie',
-              'Etoile',
-              'image link']
-    writer = csv.DictWriter(file, fieldnames=header)
-    writer.writeheader()
-
-    for single_url in all_books_urls:
-        data, links_image = get_data_in_book_page(single_url)
-        writer.writerow(data)
-        image = session.get(links_image)
-        # name the images by using their upc code
-        # use pathlib to solve the problem of /
-        image_to_write = Path('image/' + data['UPC Code'] + '.jpg')
-        with open(image_to_write, 'wb') as file:
-            file.write(image.content)
-
+i = 0
+nombres_livres = 0
+for single_url_of_category in category_urls:
+    all_books_urls_of_one_category = get_all_books_links_of_one_category(single_url_of_category)
+    csv_path = Path('Fichier CSV/' + category_names[i] + '.csv')
+    nombres_livres_dans_une_category = len(all_books_urls_of_one_category)
+    nombres_livres = nombres_livres_dans_une_category + nombres_livres
+    print(f'{nombres_livres_dans_une_category} livres trouvés dans la: {category_names[i]}')
+    print(f'Il y a {i+1} catégorie qu\'on a trouvé déjà')
+    with open(csv_path, 'w', encoding='utf-8_sig', newline='') as file:
+        header = ['product_page_url',
+                  'UPC Code',
+                  'Titre',
+                  'Prix taxe compris',
+                  'Prix hors taxe',
+                  'Stock',
+                  'Descripton',
+                  'Catégorie',
+                  'Etoile',
+                  'image link']
+        writer = csv.DictWriter(file, fieldnames=header)
+        writer.writeheader()
+        i = i + 1
+        for single_url_of_one_category in all_books_urls_of_one_category :
+            data, links_image = get_data_in_book_page(single_url_of_one_category)
+            writer.writerow(data)
+            image = session.get(links_image)
+            # name the images by using their upc code
+            # use pathlib to solve the problem of /
+            image_to_write = Path('image/' + data['UPC Code'] + '.jpg')
+            with open(image_to_write, 'wb') as file:
+                file.write(image.content)
+print(f'Il y a {nombres_livres} livres au total')
 print(f'Fini!')
-
-import re
-print(re.findall(r"\d+\.?\d*",'£45.17'))
-print(re.findall(r"\d+","In stock (19 available)"))
-data = {'one':1,"two":2}
-t = data['one']
-print(type(t))
