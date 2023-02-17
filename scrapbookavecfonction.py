@@ -7,7 +7,7 @@ import re
 import collections
 
 
-# find if there is a next button in the page
+# find if there is a next button at the  bottom of the page
 def next_page_url(page) -> Optional[str]:
     next_page_link_a_tag = page.html.find('li.next a', first='True')
     if next_page_link_a_tag is not None:
@@ -35,7 +35,7 @@ def get_links_of_category_in_first_page(first_page_url: str) -> List[str]:
         category_links.append(category_link)
         category_names.append(category_name)
 
-    # Sur le site, le premier lien renvoie en arrière donc on le supprime
+    # Sur le site, le premier lien 'book' renvoie en arrière donc on le supprime
     del category_links[0]
     del category_names[0]
 
@@ -44,7 +44,12 @@ def get_links_of_category_in_first_page(first_page_url: str) -> List[str]:
 
 # get all the links in a single detail page of category
 def get_links_of_books_in_page(page) -> list[str]:
-    # For Tuple, List, Optional objects, look at the module 'typings' in the standard library
+    """
+        Find all the links in one page
+
+        :param page: l'objet contient tous les element page
+        :return: Une liste d'urls vers les pages produits
+        """
 
     # Find book links in the page
     books_a_tags = page.html.find('div.image_container a')
@@ -82,9 +87,10 @@ def get_data_in_book_page(url: str) -> Tuple[Dict[str, str], str]:
     code_upc = page.html.find('table.table-striped tr td', first='true').text
     star_rating_information = page.html.find('p.star-rating', first='true')
 
-    # using the arguments attrs to get the star rating informations
+    # create a dictionary to translate the word to number
     star = {"One": 1, "Two": 2, "Three": 3, "Four": 4, "Five": 5}
-    # find the value by key
+
+    # using the arguments attrs to get the star rating informations
     star_rating = star[star_rating_information.attrs.get('class')[1]]
 
     price_without_tax_word = page.html.find('table.table-striped tr td')[2].text
@@ -136,10 +142,13 @@ if not os.path.exists('image'):
     os.mkdir('image')
 i = 0
 nombres_livres = 0
+# For every single category make a separate csv file named by their category name and write a header
 for single_url_of_category in category_urls:
     all_books_urls_of_one_category = get_all_books_links_of_one_category(single_url_of_category)
+    # make a directory for all the files csv which is named by their category
     csv_path = Path('Fichier CSV/' + category_names[i] + '.csv')
     nombres_livres_dans_une_category = len(all_books_urls_of_one_category)
+    # get total number of the books
     nombres_livres = nombres_livres_dans_une_category + nombres_livres
     print(f'{nombres_livres_dans_une_category} livres trouvés dans la: {category_names[i]}')
     print(f'Il y a {i+1} catégorie qu\'on a trouvé déjà')
@@ -157,6 +166,7 @@ for single_url_of_category in category_urls:
         writer = csv.DictWriter(file, fieldnames=header)
         writer.writeheader()
         i = i + 1
+        #For every single page in one category, get the informations neededs and download the pictures
         for single_url_of_one_category in all_books_urls_of_one_category :
             data, links_image = get_data_in_book_page(single_url_of_one_category)
             writer.writerow(data)
