@@ -108,15 +108,15 @@ def get_data_in_book_page(url: str) -> Tuple[Dict[str, str], str]:
     data = collections.OrderedDict()
     data = {
         'product_page_url': url,
-        'UPC Code': code_upc,
-        'Titre': title,
-        'Prix taxe compris': price_with_tax[0],
-        'Prix hors taxe': price_without_tax[0],
-        'Stock': inventory[0],
-        'Descripton': production_descripton,
-        'Catégorie': category,
-        'Etoile': star_rating,
-        'image link': image_absolute_link
+        'universal_product_code (upc)': code_upc,
+        'title': title,
+        'price_including_tax': price_with_tax[0],
+        'price_excluding_tax': price_without_tax[0],
+        'number_available': inventory[0],
+        'product_description': production_descripton,
+        'category': category,
+        'review_rating': star_rating,
+        'image_url': image_absolute_link
     }
 
     return data, image_absolute_link
@@ -154,15 +154,15 @@ for single_url_of_category in category_urls:
     print(f'Il y a {i+1} catégorie qu\'on a trouvé déjà')
     with open(csv_path, 'w', encoding='utf-8_sig', newline='') as file:
         header = ['product_page_url',
-                  'UPC Code',
-                  'Titre',
-                  'Prix taxe compris',
-                  'Prix hors taxe',
-                  'Stock',
-                  'Descripton',
-                  'Catégorie',
-                  'Etoile',
-                  'image link']
+                  'universal_product_code (upc)',
+                  'title',
+                  'price_including_tax',
+                  'price_excluding_tax',
+                  'number_available',
+                  'product_description',
+                  'category',
+                  'review_rating',
+                  'image_url']
         writer = csv.DictWriter(file, fieldnames=header)
         writer.writeheader()
         i = i + 1
@@ -173,7 +173,7 @@ for single_url_of_category in category_urls:
             image = session.get(links_image)
             # name the images by using their upc code
             # use pathlib to solve the problem of /
-            image_to_write = Path('image/' + data['UPC Code'] + '.jpg')
+            image_to_write = Path('image/' + data['universal_product_code (upc)'] + '.jpg')
             with open(image_to_write, 'wb') as file:
                 file.write(image.content)
 print(f'Il y a {nombres_livres} livres au total')
