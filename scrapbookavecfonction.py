@@ -18,7 +18,7 @@ def next_page_url(page) -> Optional[str]:
         return nex_page_link
 
 
-def get_links_of_category_in_first_page(first_page_url: str) -> List[str]:
+def get_links_of_category_in_first_page(first_page_url: str) -> List[Tuple[str, str]]:
     """
     Find all the category links in the first page except category: "book"
 
@@ -26,20 +26,17 @@ def get_links_of_category_in_first_page(first_page_url: str) -> List[str]:
     :return: Une liste d'urls vers les pages des categories,une liste de nom des categories
     """
     page = session.get(first_page_url)
-    category_links = []
-    category_names = []
+    category_data = []
     all_category_content = page.html.find('ul.nav-list a')
     for category_content in all_category_content:
         category_link = list(category_content.absolute_links)[0]
         category_name = category_content.text
-        category_links.append(category_link)
-        category_names.append(category_name)
+        category_data.append((category_link, category_name))
 
     # Sur le site, le premier lien 'book' renvoie en arrière donc on le supprime
-    del category_links[0]
-    del category_names[0]
+    del category_data[0]
 
-    return category_links, category_names
+    return category_data
 
 
 # get all the links in a single detail page of category
@@ -193,8 +190,8 @@ def run_phase2():
 def run_phase3_4():
     # get all the category links in the first page
     print(f'Récupération des liens des catégories')
-    category_urls, category_names = get_links_of_category_in_first_page(URL)
-    print(f'{len(category_urls)} catégories trouvées')
+    category_data = get_links_of_category_in_first_page(URL)
+    print(f'{len(category_data)} catégories trouvées')
     # make a CSV folder if there is not have
     if not os.path.exists('output_data/phase3_4'):
         os.mkdir('output_data/phase3_4')
@@ -205,14 +202,14 @@ def run_phase3_4():
     i = 0
     nombres_livres = 0
     # For every single category make a separate csv file named by their category name and write a header
-    for single_url_of_category in category_urls:
-        all_books_urls_of_one_category = get_all_books_links_of_one_category(single_url_of_category)
+    for category_url, category_name in category_data:
+        all_books_urls_of_one_category = get_all_books_links_of_one_category(category_url)
         # make a directory for all the files csv which is named by their category
-        csv_path = Path('output_data/phase3_4/' + category_names[i] + '.csv')
+        csv_path = Path('output_data/phase3_4/' + category_name + '.csv')
         nombres_livres_dans_une_category = len(all_books_urls_of_one_category)
         # get total number of the books
         nombres_livres = nombres_livres_dans_une_category + nombres_livres
-        print(f'{nombres_livres_dans_une_category} livres trouvés dans la: {category_names[i]}')
+        print(f'{nombres_livres_dans_une_category} livres trouvés dans la: {category_name}')
         print(f'Il y a {i + 1} catégorie qu\'on a trouvé déjà')
         with open(csv_path, 'w', encoding='utf-8_sig', newline='') as file:
             header = ['product_page_url',
