@@ -159,8 +159,35 @@ def run_phase1():
 def run_phase2():
     if not os.path.exists('output_data/phase2'):
         os.mkdir('output_data/phase2')
-    category_url = 'To do'
-    pass
+    # get all the category links in the first page
+    category_url = 'http://books.toscrape.com/catalogue/category/books/romance_8/index.html'
+    category_name = 'Romance'
+
+    # For every single category make a separate csv file named by their category name and write a header
+    all_books_urls_of_one_category = get_all_books_links_of_one_category(category_url)
+    # make a directory for all the files csv which is named by their category
+    csv_path = Path('output_data/phase2/' + category_name + '.csv')
+    nombres_livres_dans_une_category = len(all_books_urls_of_one_category)
+    # get total number of the books
+    print(f'{nombres_livres_dans_une_category} livres trouvés dans la: {category_name}')
+    with open(csv_path, 'w', encoding='utf-8_sig', newline='') as file:
+        header = ['product_page_url',
+                  'UPC Code',
+                  'Titre',
+                  'Prix taxe compris',
+                  'Prix hors taxe',
+                  'Stock',
+                  'Descripton',
+                  'Catégorie',
+                  'Etoile',
+                  'image link']
+        writer = csv.DictWriter(file, fieldnames=header)
+        writer.writeheader()
+        # For every single page in one category, get the informations neededs and download the pictures
+        for book_url_from_the_category in all_books_urls_of_one_category:
+            data, links_image = get_data_in_book_page(book_url_from_the_category)
+            writer.writerow(data)
+    print(f'Fini!')
 
 
 def run_phase3_4():
@@ -169,19 +196,19 @@ def run_phase3_4():
     category_urls, category_names = get_links_of_category_in_first_page(URL)
     print(f'{len(category_urls)} catégories trouvées')
     # make a CSV folder if there is not have
-    if not os.path.exists('output_data'):
-        os.mkdir('output_data')
+    if not os.path.exists('output_data/phase3_4'):
+        os.mkdir('output_data/phase3_4')
 
     # make a image folder if there is not have
-    if not os.path.exists('output_data/images'):
-        os.mkdir('output_data/images')
+    if not os.path.exists('output_data/phase3_4/images'):
+        os.mkdir('output_data/phase3_4/images')
     i = 0
     nombres_livres = 0
     # For every single category make a separate csv file named by their category name and write a header
     for single_url_of_category in category_urls:
         all_books_urls_of_one_category = get_all_books_links_of_one_category(single_url_of_category)
         # make a directory for all the files csv which is named by their category
-        csv_path = Path('output_data/' + category_names[i] + '.csv')
+        csv_path = Path('output_data/phase3_4/' + category_names[i] + '.csv')
         nombres_livres_dans_une_category = len(all_books_urls_of_one_category)
         # get total number of the books
         nombres_livres = nombres_livres_dans_une_category + nombres_livres
@@ -208,7 +235,7 @@ def run_phase3_4():
                 image = session.get(links_image)
                 # name the images by using their upc code
                 # use pathlib to solve the problem of /
-                image_to_write = Path('output_data/images/' + data['UPC Code'] + '.jpg')
+                image_to_write = Path('output_data/phase3_4/images/' + data['UPC Code'] + '.jpg')
                 with open(image_to_write, 'wb') as file:
                     file.write(image.content)
     print(f'Il y a {nombres_livres} livres au total')
@@ -221,4 +248,4 @@ if __name__ == '__main__':
     print('Executé comme un script')
     # run_phase1()
     run_phase2()
-    run_phase3_4()
+    # run_phase3_4()
