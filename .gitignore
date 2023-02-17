@@ -1,3 +1,8 @@
+__pycache__/
+.idea
+env/
+
 #dossier img et csv
 /image/
 *.csv
+output_data/
